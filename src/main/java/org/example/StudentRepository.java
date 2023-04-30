@@ -1,5 +1,9 @@
 package org.example;
-
+/**
+ * Repository class that contains methods that add, delete, list students based on last name/D.O.B.
+ * and retrieve a student/s based on age.
+ * For the add method, there are some validations if not met, then some exceptions are thrown.
+ */
 
 import java.time.DateTimeException;
 import java.time.LocalDate;
@@ -7,139 +11,60 @@ import java.util.*;
 
 
 public class StudentRepository {
-    protected HashMap<Integer, Student> studentHashMap = new HashMap<>();
-
-    protected void createStudent() {
-        boolean IdValidation = false;
-        boolean firstNameValidation = false;
-        boolean lastNameValidation = false;
-        boolean dateOfBirthValidation = false;
-        boolean genderValidation = false;
-        String genderInput;
-        String dateOfBirthInput;
-        Student createdStudent = new Student("a", "b", LocalDate.parse("2000-10-10"), "d", 0);
-        Scanner scanner = new Scanner(System.in);
-
-        System.out.println("Please enter Student first name: ");
-        while (!firstNameValidation) {
-            try {
-                createdStudent.firstName = scanner.nextLine();
-                if (createdStudent.firstName.length() >= 3) {
-                    firstNameValidation = true;
-                } else {
-                    System.out.println("The first name should have at least three characters in order to be valid.");
-                }
-            } catch (Exception e) {
-                throw new IllegalArgumentException("First name should not be left empty. Please try again.");
-            }
-        }
-
-        System.out.println("Please enter Student last name: ");
-        while (!lastNameValidation) {
-            try {
-                createdStudent.lastName = scanner.nextLine();
-                if (createdStudent.lastName.length() >= 3) {
-                    lastNameValidation = true;
-                } else {
-                    System.out.println("The last name should have at least three characters in order to be valid.");
-                }
-            } catch (Exception e) {
-                throw new IllegalArgumentException("Last name should not be left empty. Please try again.");
-            }
-        }
-
-        System.out.println("Please enter Student date of birth with the following format yyyy-mm-dd: ");
-        dateOfBirthInput = scanner.nextLine();
-        while (!dateOfBirthValidation) {
-            try {
-                createdStudent.dateOfBirth = LocalDate.parse(dateOfBirthInput);
-                if (createdStudent.dateOfBirth.isAfter(LocalDate.parse("1900-01-01")) ||
-                        createdStudent.dateOfBirth.isBefore(LocalDate.parse("2023-04-25"))) {
-                    dateOfBirthValidation = true;
-                } else {
-                    System.out.println("Student date of birth is not valid. Please retry.");
-                }
-            } catch (Exception e) {
-                throw new DateTimeException("Students DOB must be between 1900-01-01 & 2023-04-25");
-            }
-        }
-
-        System.out.println("Please enter Student gender, M for male / F for female: ");
-        while (!genderValidation) {
-            try {
-                genderInput = scanner.nextLine();
-                switch (genderInput) {
-                    case "M", "F" -> {
-                        genderValidation = true;
-                        createdStudent.gender = genderInput;
-                    }
-                    default -> System.out.println("Please enter a valid gender type.");
-                }
-            } catch (Exception e) {
-                throw new IllegalArgumentException("Gender should not be left empty. Please try again.");
-            }
-        }
-
-        System.out.println("Please enter Student ID: ");
-        while (!IdValidation) {
-            try {
-                createdStudent.ID = Integer.parseInt(scanner.nextLine());
-                IdValidation = true;
-            } catch (NumberFormatException | NullPointerException nfe) {
-                throw new IllegalArgumentException("Error, please enter a number based ID.");
-            }
-        }
-        addStudent(createdStudent);
-    }
+    protected List<Student> studentList = new ArrayList<>();
 
     void addStudent(Student student) {
-        try {
-            studentHashMap.put(student.ID, student);
-            System.out.println("Student is being added to the repository.");
-        } catch (RuntimeException iae) {
-            System.out.println("The ID you have entered is not valid. Please enter only digits for the ID field.");
+        if (!student.fullNameValidation()) {
+            throw new IllegalArgumentException("Invalid first/last name. " +
+                    "Name should have at least three characters in order to be valid.");
         }
+        if (!student.dateOfBirthValidation()) {
+            throw new DateTimeException("Student date of birth is not valid. " +
+                    "Student DOB must be between 1900-01-01 & 2023-04-25");
+        }
+        if (!student.genderValidation()) {
+            throw new IllegalArgumentException("Gender input is not valid. " +
+                    "Please enter Student gender, M for male / F for female");
+        }
+        studentList.add(student);
     }
 
     void deleteStudent(Integer studentID) {
-        if (studentHashMap.containsKey(studentID)) {
-            studentHashMap.remove(studentID);
-            System.out.println("The student with the following ID: " + studentID + " is removed.");
-        } else if (studentID == null) {
-            System.out.println("The ID entered must not be null. Please try again.");
+        if (studentID == null || !studentID.equals(studentList.listIterator().next().ID)) {
+            System.out.println("The ID entered must not be null or " +
+                    "it is not linked to any student in the repository.");
         } else {
-            System.out.println("The ID entered is not linked to any student in the repository.");
+            studentList.removeIf(student -> student.ID.equals(studentID));
+            System.out.println("Student is now removed from the repository.");
         }
     }
 
-    void retrieveStudent(Integer age) {
+    Student retrieveStudent(Integer age) {
+        Integer yearCheck = LocalDate.now().getYear() - age;
         if (age <= 0) {
             throw new IllegalArgumentException("Age must not be negative.");
-        }
-        try {
-            LocalDate currentYear = LocalDate.now();
-            studentHashMap.forEach((ID, Student) -> {
-                if (Student.dateOfBirth.compareTo(currentYear) == age) {
-                    System.out.print("Student " + Student.firstName + " " + Student.lastName +
-                            ", with the ID: " + Student.ID + ", has the age of " + age);
+        } else {
+            for (Student student : studentList) {
+                if (student.dateOfBirth.getYear() == yearCheck) {
+                    System.out.println("The student " + student.firstName + " "
+                            + student.lastName + " has the current age of: " + age);
+                    return student;
+                } else {
+                    System.out.println("There are no/no other students with the requested age of: " + age);
                 }
-            });
-        } catch (Exception e) {
-            throw new RuntimeException("Age must be a number in order for the search to work." + e.getMessage());
+            }
         }
-
+        return null;
     }
 
     void listAllStudentsByLastName() {
-        List list = new ArrayList<>(studentHashMap.entrySet().stream().toList());
-        Collections.sort(list, new LastNameComparator());
-        System.out.println(list);
+        studentList.sort(new LastNameComparator());
+        System.out.println(studentList);
     }
 
     void listAllStudentsByDateOfBirth() {
-        List list = new ArrayList<>(studentHashMap.entrySet().stream().toList());
-        Collections.sort(list, new BirthDateComparator());
-        System.out.println(list);
+        studentList.sort(new BirthDateComparator());
+        System.out.println(studentList);
     }
 
 }
